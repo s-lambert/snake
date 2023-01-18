@@ -44,7 +44,8 @@ impl Direction {
 
 #[derive(Component)]
 struct SnakeHead {
-    direction: Direction,
+    next_direction: Direction,
+    curr_direction: Direction,
 }
 
 #[derive(Component)]
@@ -115,7 +116,8 @@ fn spawn_snake(mut commands: Commands, mut segments: ResMut<SnakeSegments>) {
                 ..default()
             })
             .insert(SnakeHead {
-                direction: Direction::Up,
+                next_direction: Direction::Up,
+                curr_direction: Direction::Up,
             })
             .insert(Position { x: 3, y: 3 })
             .insert(Size::square(0.8))
@@ -150,10 +152,10 @@ fn snake_movement_input(keyboard_input: Res<Input<KeyCode>>, mut heads: Query<&m
         } else if keyboard_input.pressed(KeyCode::Right) {
             Direction::Right
         } else {
-            head.direction
+            head.next_direction
         };
-        if dir != head.direction.opposite() {
-            head.direction = dir;
+        if dir != head.curr_direction.opposite() {
+            head.next_direction = dir;
         }
     }
 }
@@ -161,17 +163,18 @@ fn snake_movement_input(keyboard_input: Res<Input<KeyCode>>, mut heads: Query<&m
 fn snake_movement(
     segments: Res<SnakeSegments>,
     mut last_tail_position: ResMut<LastTailPosition>,
-    mut heads: Query<(Entity, &SnakeHead)>,
+    mut heads: Query<(Entity, &mut SnakeHead)>,
     mut positions: Query<&mut Position>,
     mut game_over_writer: EventWriter<GameOverEvent>,
 ) {
-    if let Some((head_entity, head)) = heads.iter_mut().next() {
+    if let Some((head_entity, mut head)) = heads.iter_mut().next() {
+        head.curr_direction = head.next_direction;
         let segment_positions = segments
             .iter()
             .map(|e| *positions.get_mut(*e).unwrap())
             .collect::<Vec<Position>>();
         let mut head_pos = positions.get_mut(head_entity).unwrap();
-        match &head.direction {
+        match &head.next_direction {
             Direction::Left => {
                 head_pos.x -= 1;
             }
