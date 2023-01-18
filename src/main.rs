@@ -119,6 +119,7 @@ fn spawn_snake(mut commands: Commands, mut segments: ResMut<SnakeSegments>) {
                 next_direction: Direction::Up,
                 curr_direction: Direction::Up,
             })
+            .insert(SnakeSegment)
             .insert(Position { x: 3, y: 3 })
             .insert(Size::square(0.8))
             .id(),
@@ -206,7 +207,27 @@ fn snake_movement(
     }
 }
 
-fn spawn_food(mut commands: Commands) {
+fn spawn_food(
+    mut commands: Commands,
+    segment_positions: Query<&Position, With<SnakeSegment>>,
+    food_positions: Query<&Position, With<Food>>,
+) {
+    let position = loop {
+        let new_position = Position {
+            x: (random::<f32>() * ARENA_WIDTH as f32) as i32,
+            y: (random::<f32>() * ARENA_HEIGHT as f32) as i32,
+        };
+        if !segment_positions
+            .iter()
+            .any(|p| p.x == new_position.x && p.y == new_position.y)
+            && !food_positions
+                .iter()
+                .any(|p| p.x == new_position.x && p.y == new_position.y)
+        {
+            break new_position;
+        }
+    };
+    dbg!(segment_positions);
     commands
         .spawn(SpriteBundle {
             sprite: Sprite {
@@ -216,10 +237,7 @@ fn spawn_food(mut commands: Commands) {
             ..default()
         })
         .insert(Food)
-        .insert(Position {
-            x: (random::<f32>() * ARENA_WIDTH as f32) as i32,
-            y: (random::<f32>() * ARENA_HEIGHT as f32) as i32,
-        })
+        .insert(position)
         .insert(Size::square(0.8));
 }
 
@@ -279,7 +297,7 @@ fn main() {
         .add_system_set(
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::step(1.0))
-                .with_system(spawn_food.after(snake_growth)),
+                .with_system(spawn_food),
         )
         .add_system_set_to_stage(
             CoreStage::PostUpdate,
