@@ -227,7 +227,6 @@ fn spawn_food(
             break new_position;
         }
     };
-    dbg!(segment_positions);
     commands
         .spawn(SpriteBundle {
             sprite: Sprite {
