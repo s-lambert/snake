@@ -60,6 +60,9 @@ struct LastTailPosition(Option<Position>);
 #[derive(Component)]
 struct Food;
 
+#[derive(Resource)]
+struct EatSound(Handle<AudioSource>);
+
 struct GrowthEvent;
 
 const ARENA_WIDTH: u32 = 10;
@@ -207,6 +210,14 @@ fn snake_movement(
     }
 }
 
+fn setup_sound(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    let eat_sound = asset_server.load("sounds/pickup.ogg");
+    commands.insert_resource(EatSound(eat_sound));
+}
+
 fn spawn_food(
     mut commands: Commands,
     segment_positions: Query<&Position, With<SnakeSegment>>,
@@ -245,12 +256,15 @@ fn snake_eating(
     mut growth_writer: EventWriter<GrowthEvent>,
     food_positions: Query<(Entity, &Position), With<Food>>,
     head_positions: Query<&Position, With<SnakeHead>>,
+    audio: Res<Audio>,
+    eat_sound: Res<EatSound>,
 ) {
     for head_pos in head_positions.iter() {
         for (ent, food_pos) in food_positions.iter() {
             if food_pos == head_pos {
                 commands.entity(ent).despawn();
                 growth_writer.send(GrowthEvent);
+                audio.play(eat_sound.0.clone());
             }
         }
     }
@@ -284,6 +298,7 @@ fn main() {
         .add_event::<GrowthEvent>()
         .add_startup_system(setup_camera)
         .add_startup_system(spawn_snake)
+        .add_startup_system(setup_sound)
         .add_system_set(
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::step(0.150))
